@@ -196,6 +196,7 @@
         localStorage.setItem('torn_api_key', apiKey);
         const url = `https://api.torn.com/user/${playerId}?selections=profile&key=${apiKey}`;
 
+        
         try {
             // 1. Fetch from Torn
             const response = await fetch(url);
