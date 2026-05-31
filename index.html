@@ -58,7 +58,7 @@
             margin-bottom: 15px;
         }
 
-        input[type="text"], input[type="password"] {
+        input[type="password"], input[type="text"] {
             flex: 1;
             padding: 10px;
             border: 1px solid var(--border-color);
@@ -128,6 +128,14 @@
         .value {
             color: var(--success-color);
         }
+
+        .value a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        .value a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -140,9 +148,9 @@
         <input type="password" id="apiKey" placeholder="Paste your API key here...">
     </div>
 
-    <label class="section-label" for="playerId">Target Player</label>
+    <label class="section-label" for="playerId">Target Player ID</label>
     <div class="input-group">
-        <input type="text" id="playerId" placeholder="Enter Player ID...">
+        <input type="text" id="playerId" placeholder="Enter Numeric Player ID...">
         <button onclick="fetchAndLogData()">Fetch & Log</button>
     </div>
 
@@ -159,6 +167,18 @@
             <span class="value" id="resLevel">-</span>
         </div>
         <div class="data-row">
+            <span class="label">Faction:</span>
+            <span class="value" id="resFaction">-</span>
+        </div>
+        <div class="data-row">
+            <span class="label">Job/Company:</span>
+            <span class="value" id="resJob">-</span>
+        </div>
+        <div class="data-row">
+            <span class="label">Networth:</span>
+            <span class="value" id="resNetworth">-</span>
+        </div>
+        <div class="data-row">
             <span class="label">Status:</span>
             <span class="value" id="resStatus">-</span>
         </div>
@@ -166,12 +186,16 @@
             <span class="label">Life:</span>
             <span class="value" id="resLife">-</span>
         </div>
+        <div class="data-row">
+            <span class="label">Profile Link:</span>
+            <span class="value" id="resLink">-</span>
+        </div>
     </div>
 </div>
 
 <script>
     const GOOGLE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbybt867HbypElbcUfckR_CPJxxbugnppYonBDXJ-OgVgnM-19OgMUnn7brwR1QpwLCa/exec';
-    // Load saved key on boot
+
     document.addEventListener('DOMContentLoaded', () => {
         const savedKey = localStorage.getItem('torn_api_key');
         if (savedKey) document.getElementById('apiKey').value = savedKey;
@@ -196,9 +220,7 @@
         localStorage.setItem('torn_api_key', apiKey);
         const url = `https://api.torn.com/user/${playerId}?selections=profile&key=${apiKey}`;
 
-        
         try {
-            // 1. Fetch from Torn
             const response = await fetch(url);
             if (!response.ok) throw new Error('Torn API communication failure.');
             const data = await response.json();
@@ -213,28 +235,41 @@
             const pLevel = data.level;
             const pStatus = data.status ? data.status.description : 'Unknown';
             const pLife = data.life ? `${data.life.current}/${data.life.max}` : 'N/A';
+            
+            // New Extractions
+            const pFaction = data.faction && data.faction.faction_name ? `${data.faction.faction_name} [${data.faction.faction_id}]` : 'None';
+            const pJob = data.job && data.job.company_name ? data.job.company_name : (data.job && data.job.position ? data.job.position : 'None');
+            const pNetworth = data.personalstats && data.personalstats.networth ? `$${data.personalstats.networth.toLocaleString()}` : 'N/A';
+            const pProfileUrl = `https://www.torn.com/profiles.php?XID=${data.player_id}`;
 
             // Update UI elements
             document.getElementById('resName').textContent = `${pName} [${data.player_id}]`;
             document.getElementById('resLevel').textContent = pLevel;
+            document.getElementById('resFaction').textContent = pFaction;
+            document.getElementById('resJob').textContent = pJob;
+            document.getElementById('resNetworth').textContent = pNetworth;
             document.getElementById('resStatus').textContent = pStatus;
             document.getElementById('resLife').textContent = pLife;
+            document.getElementById('resLink').innerHTML = `<a href="${pProfileUrl}" target="_blank">Open Profile</a>`;
             card.style.display = 'block';
 
-            // 2. Send Data to Google Sheet
-            if (GOOGLE_WEB_APP_URL && !GOOGLE_WEB_APP_URL.includes('YOUR_GOOGLE_')) {
+            // Send Data to Google Sheet
+            if (GOOGLE_WEB_APP_URL) {
                 logStatusDiv.textContent = "Sending to Google Sheets...";
                 logStatusDiv.style.backgroundColor = "#2a4d6c";
                 logStatusDiv.style.color = "#00d2ff";
                 logStatusDiv.style.display = "block";
 
-                // Format data as standard text/plain parameters to cleanly clear CORS
                 const params = new URLSearchParams({
                     playerId: data.player_id,
                     name: pName,
                     level: pLevel,
                     status: pStatus,
-                    life: pLife
+                    life: pLife,
+                    faction: pFaction,
+                    job: pJob,
+                    networth: pNetworth,
+                    profileUrl: pProfileUrl
                 });
 
                 await fetch(GOOGLE_WEB_APP_URL, {
