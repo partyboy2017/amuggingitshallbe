@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Player Lookup & Logger</title>
+    <title>Player Lookup Tool</title>
     <style>
         :root {
             --bg-color: #1a1a1a;
@@ -91,17 +91,6 @@
             font-weight: bold;
         }
 
-        .log-status {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 4px;
-            background-color: #1b3a24;
-            color: #2ecc71;
-            text-align: center;
-            font-size: 14px;
-            display: none;
-        }
-
         #resultCard {
             display: none;
             border-top: 2px solid var(--border-color);
@@ -141,7 +130,7 @@
 <body>
 
 <div class="container">
-    <h2>Player Lookup & Logger</h2>
+    <h2>Player Lookup Tool</h2>
     
     <label class="section-label" for="apiKey">Torn API Key</label>
     <div class="input-group">
@@ -151,11 +140,10 @@
     <label class="section-label" for="playerId">Target Player ID</label>
     <div class="input-group">
         <input type="text" id="playerId" placeholder="Enter Numeric Player ID...">
-        <button onclick="fetchAndLogData()">Fetch & Log</button>
+        <button onclick="fetchData()">Fetch Player</button>
     </div>
 
     <div id="errorMessage" class="error"></div>
-    <div id="logStatus" class="log-status"></div>
 
     <div id="resultCard">
         <div class="data-row">
@@ -194,22 +182,18 @@
 </div>
 
 <script>
-    const GOOGLE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbybt867HbypElbcUfckR_CPJxxbugnppYonBDXJ-OgVgnM-19OgMUnn7brwR1QpwLCa/exec';
-
     document.addEventListener('DOMContentLoaded', () => {
         const savedKey = localStorage.getItem('torn_api_key');
         if (savedKey) document.getElementById('apiKey').value = savedKey;
     });
 
-    async function fetchAndLogData() {
+    async function fetchData() {
         const apiKey = document.getElementById('apiKey').value.trim();
         const playerId = document.getElementById('playerId').value.trim();
         const errorDiv = document.getElementById('errorMessage');
-        const logStatusDiv = document.getElementById('logStatus');
         const card = document.getElementById('resultCard');
 
         errorDiv.style.display = 'none';
-        logStatusDiv.style.display = 'none';
         card.style.display = 'none';
 
         if (!apiKey || !playerId) {
@@ -236,13 +220,12 @@
             const pStatus = data.status ? data.status.description : 'Unknown';
             const pLife = data.life ? `${data.life.current}/${data.life.max}` : 'N/A';
             
-            // New Extractions
             const pFaction = data.faction && data.faction.faction_name ? `${data.faction.faction_name} [${data.faction.faction_id}]` : 'None';
             const pJob = data.job && data.job.company_name ? data.job.company_name : (data.job && data.job.position ? data.job.position : 'None');
             const pNetworth = data.personalstats && data.personalstats.networth ? `$${data.personalstats.networth.toLocaleString()}` : 'N/A';
             const pProfileUrl = `https://www.torn.com/profiles.php?XID=${data.player_id}`;
 
-            // Update UI elements
+            // Update UI elements instantly
             document.getElementById('resName').textContent = `${pName} [${data.player_id}]`;
             document.getElementById('resLevel').textContent = pLevel;
             document.getElementById('resFaction').textContent = pFaction;
@@ -251,41 +234,11 @@
             document.getElementById('resStatus').textContent = pStatus;
             document.getElementById('resLife').textContent = pLife;
             document.getElementById('resLink').innerHTML = `<a href="${pProfileUrl}" target="_blank">Open Profile</a>`;
+            
             card.style.display = 'block';
 
-            // Send Data to Google Sheet
-            if (GOOGLE_WEB_APP_URL) {
-                logStatusDiv.textContent = "Sending to Google Sheets...";
-                logStatusDiv.style.backgroundColor = "#2a4d6c";
-                logStatusDiv.style.color = "#00d2ff";
-                logStatusDiv.style.display = "block";
-
-                const params = new URLSearchParams({
-                    playerId: data.player_id,
-                    name: pName,
-                    level: pLevel,
-                    status: pStatus,
-                    life: pLife,
-                    faction: pFaction,
-                    job: pJob,
-                    networth: pNetworth,
-                    profileUrl: pProfileUrl
-                });
-
-                await fetch(GOOGLE_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', 
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: params.toString()
-                });
-
-                logStatusDiv.textContent = "✓ Saved to Google Sheet successfully!";
-                logStatusDiv.style.backgroundColor = "#1b3a24";
-                logStatusDiv.style.color = "#2ecc71";
-            }
-
         } catch (error) {
-            showError('An error occurred during execution. Check network or URLs.');
+            showError('An error occurred while fetching data from Torn.');
             console.error(error);
         }
     }
