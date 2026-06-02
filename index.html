@@ -254,7 +254,7 @@
 
             // Send Data to Google Sheet
             if (GOOGLE_WEB_APP_URL) {
-                logStatusDiv.textContent = "Sending to Google Sheets...";
+                logStatusDiv.textContent = "looking up player..";
                 logStatusDiv.style.backgroundColor = "#2a4d6c";
                 logStatusDiv.style.color = "#00d2ff";
                 logStatusDiv.style.display = "block";
@@ -278,7 +278,7 @@
                     body: params.toString()
                 });
 
-                logStatusDiv.textContent = "✓ Saved to Google Sheet successfully!";
+                logStatusDiv.textContent = "✓ Look was successful!";
                 logStatusDiv.style.backgroundColor = "#1b3a24";
                 logStatusDiv.style.color = "#2ecc71";
             }
