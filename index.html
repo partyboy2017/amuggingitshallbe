@@ -175,10 +175,6 @@
             <span class="value" id="resJob">-</span>
         </div>
         <div class="data-row">
-            <span class="label">Networth:</span>
-            <span class="value" id="resNetworth">-</span>
-        </div>
-        <div class="data-row">
             <span class="label">Status:</span>
             <span class="value" id="resStatus">-</span>
         </div>
@@ -234,11 +230,10 @@
             const pName = data.name;
             const pLevel = data.level;
             const pStatus = data.status ? data.status.description : 'Unknown';
-            const pLife = data.life ? `${data.life.current}/${data.life.max}` : 'N/A';
+            const pLife = data.life ? data.life.current : 'N/A';
             
             const pFaction = data.faction && data.faction.faction_name ? `${data.faction.faction_name} [${data.faction.faction_id}]` : 'None';
             const pJob = data.job && data.job.company_name ? data.job.company_name : (data.job && data.job.position ? data.job.position : 'None');
-            const pNetworth = data.personalstats && data.personalstats.networth ? `$${data.personalstats.networth.toLocaleString()}` : 'N/A';
             const pProfileUrl = `https://www.torn.com/profiles.php?XID=${data.player_id}`;
 
             // Update UI elements
@@ -246,7 +241,6 @@
             document.getElementById('resLevel').textContent = pLevel;
             document.getElementById('resFaction').textContent = pFaction;
             document.getElementById('resJob').textContent = pJob;
-            document.getElementById('resNetworth').textContent = pNetworth;
             document.getElementById('resStatus').textContent = pStatus;
             document.getElementById('resLife').textContent = pLife;
             document.getElementById('resLink').innerHTML = `<a href="${pProfileUrl}" target="_blank">Open Profile</a>`;
@@ -267,7 +261,6 @@
                     life: pLife,
                     faction: pFaction,
                     job: pJob,
-                    networth: pNetworth,
                     profileUrl: pProfileUrl
                 });
 
