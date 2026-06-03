@@ -14,7 +14,7 @@
             --input-bg: #111;
             --border-color: #444;
         }
-
+ 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
@@ -26,7 +26,7 @@
             align-items: center;
             min-height: 100vh;
         }
-
+ 
         .container {
             background-color: var(--card-bg);
             padding: 30px;
@@ -35,13 +35,13 @@
             width: 100%;
             max-width: 500px;
         }
-
+ 
         h2 {
             margin-top: 0;
             text-align: center;
             color: var(--accent-color);
         }
-
+ 
         .section-label {
             display: block;
             font-size: 12px;
@@ -51,13 +51,13 @@
             margin-bottom: 5px;
             margin-top: 15px;
         }
-
+ 
         .input-group {
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
         }
-
+ 
         input[type="password"], input[type="text"] {
             flex: 1;
             padding: 10px;
@@ -67,7 +67,7 @@
             color: #fff;
             font-size: 16px;
         }
-
+ 
         button {
             padding: 10px 20px;
             background-color: var(--accent-color);
@@ -78,11 +78,11 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-
+ 
         button:hover {
             background-color: #2980b9;
         }
-
+ 
         .error {
             color: #e74c3c;
             margin-top: 15px;
@@ -90,7 +90,7 @@
             display: none;
             font-weight: bold;
         }
-
+ 
         .log-status {
             margin-top: 15px;
             padding: 10px;
@@ -101,34 +101,34 @@
             font-size: 14px;
             display: none;
         }
-
+ 
         #resultCard {
             display: none;
             border-top: 2px solid var(--border-color);
             padding-top: 20px;
             margin-top: 20px;
         }
-
+ 
         .data-row {
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
             border-bottom: 1px solid #3d3d3d;
         }
-
+ 
         .data-row:last-child {
             border-bottom: none;
         }
-
+ 
         .label {
             color: #aaa;
             font-weight: bold;
         }
-
+ 
         .value {
             color: var(--success-color);
         }
-
+ 
         .value a {
             color: var(--accent-color);
             text-decoration: none;
@@ -139,7 +139,7 @@
     </style>
 </head>
 <body>
-
+ 
 <div class="container">
     <h2>Player Lookup & Logger</h2>
     
@@ -147,16 +147,16 @@
     <div class="input-group">
         <input type="password" id="apiKey" placeholder="Paste your API key here...">
     </div>
-
+ 
     <label class="section-label" for="playerId">Target Player ID</label>
     <div class="input-group">
         <input type="text" id="playerId" placeholder="Enter Numeric Player ID...">
         <button onclick="fetchAndLogData()">Fetch & Log</button>
     </div>
-
+ 
     <div id="errorMessage" class="error"></div>
     <div id="logStatus" class="log-status"></div>
-
+ 
     <div id="resultCard">
         <div class="data-row">
             <span class="label">Name:</span>
@@ -173,6 +173,10 @@
         <div class="data-row">
             <span class="label">Job/Company:</span>
             <span class="value" id="resJob">-</span>
+        </div>
+        <div class="data-row">
+            <span class="label">Networth:</span>
+            <span class="value" id="resNetworth">-</span>
         </div>
         <div class="data-row">
             <span class="label">Status:</span>
@@ -192,108 +196,139 @@
         </div>
     </div>
 </div>
-
+ 
 <script>
     const GOOGLE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbybt867HbypElbcUfckR_CPJxxbugnppYonBDXJ-OgVgnM-19OgMUnn7brwR1QpwLCa/exec';
-
+ 
     document.addEventListener('DOMContentLoaded', () => {
         const savedKey = localStorage.getItem('torn_api_key');
         if (savedKey) document.getElementById('apiKey').value = savedKey;
     });
-
+ 
+    function formatNetworth(value) {
+        if (!value || isNaN(value)) return 'N/A';
+        if (value >= 1_000_000_000) return '$' + (value / 1_000_000_000).toFixed(2) + 'B';
+        if (value >= 1_000_000) return '$' + (value / 1_000_000).toFixed(2) + 'M';
+        if (value >= 1_000) return '$' + (value / 1_000).toFixed(2) + 'K';
+        return '$' + value;
+    }
+ 
     async function fetchAndLogData() {
         const apiKey = document.getElementById('apiKey').value.trim();
         const playerId = document.getElementById('playerId').value.trim();
         const errorDiv = document.getElementById('errorMessage');
         const logStatusDiv = document.getElementById('logStatus');
         const card = document.getElementById('resultCard');
-
+ 
         errorDiv.style.display = 'none';
         logStatusDiv.style.display = 'none';
         card.style.display = 'none';
-
+ 
         if (!apiKey || !playerId) {
             showError('Both API Key and Player ID are required.');
             return;
         }
-
+ 
         localStorage.setItem('torn_api_key', apiKey);
-        const url = `https://api.torn.com/user/${playerId}?selections=profile&key=${apiKey}`;
-
+ 
+        // Fetch profile and personalstats (for networth) in parallel
+        const profileUrl = `https://api.torn.com/user/${playerId}?selections=profile&key=${apiKey}`;
+        const networthUrl = `https://api.torn.com/user/${playerId}?selections=networth&key=${apiKey}`;
+ 
         try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Torn API communication failure.');
-            const data = await response.json();
-
-            if (data.error) {
-                showError(`Torn API Error: ${data.error.error}`);
+            const [profileRes, networthRes] = await Promise.all([
+                fetch(profileUrl),
+                fetch(networthUrl)
+            ]);
+ 
+            if (!profileRes.ok || !networthRes.ok) throw new Error('Torn API communication failure.');
+ 
+            const profileData = await profileRes.json();
+            const networthData = await networthRes.json();
+ 
+            if (profileData.error) {
+                showError(`Torn API Error: ${profileData.error.error}`);
                 return;
             }
-
+            if (networthData.error) {
+                showError(`Torn API Error (networth): ${networthData.error.error}`);
+                return;
+            }
+ 
             // Extract variables
-            const pName = data.name;
-            const pLevel = data.level;
-            const pStatus = data.status ? data.status.description : 'Unknown';
-            const pLife = data.life ? data.life.current : 'N/A';
-            const pFaction = data.faction && data.faction.faction_name ? `${data.faction.faction_name} [${data.faction.faction_id}]` : 'None';
-            const pJob = data.job && data.job.company_name ? data.job.company_name : (data.job && data.job.position ? data.job.position : 'None');
-            const pProfileUrl = `https://www.torn.com/profiles.php?XID=${data.player_id}`;
-            const pLastAction = data.last_action ? `${data.last_action.relative} (${data.last_action.status})` : 'Unknown';
-
-            // Update UI elements
-            document.getElementById('resName').textContent = `${pName} [${data.player_id}]`;
-            document.getElementById('resLevel').textContent = pLevel;
-            document.getElementById('resFaction').textContent = pFaction;
-            document.getElementById('resJob').textContent = pJob;
-            document.getElementById('resStatus').textContent = pStatus;
-            document.getElementById('resLife').textContent = pLife;
+            const pName       = profileData.name;
+            const pLevel      = profileData.level;
+            const pStatus     = profileData.status ? profileData.status.description : 'Unknown';
+            const pLife       = profileData.life ? profileData.life.current : 'N/A';
+            const pFaction    = profileData.faction && profileData.faction.faction_name
+                                  ? `${profileData.faction.faction_name} [${profileData.faction.faction_id}]`
+                                  : 'None';
+            const pJob        = profileData.job && profileData.job.company_name
+                                  ? profileData.job.company_name
+                                  : (profileData.job && profileData.job.position ? profileData.job.position : 'None');
+            const pProfileUrl = `https://www.torn.com/profiles.php?XID=${profileData.player_id}`;
+            const pLastAction = profileData.last_action
+                                  ? `${profileData.last_action.relative} (${profileData.last_action.status})`
+                                  : 'Unknown';
+            const pNetworthRaw = networthData.networth ? networthData.networth.total : null;
+            const pNetworth   = formatNetworth(pNetworthRaw);
+ 
+            // Update UI
+            document.getElementById('resName').textContent       = `${pName} [${profileData.player_id}]`;
+            document.getElementById('resLevel').textContent      = pLevel;
+            document.getElementById('resFaction').textContent    = pFaction;
+            document.getElementById('resJob').textContent        = pJob;
+            document.getElementById('resNetworth').textContent   = pNetworth;
+            document.getElementById('resStatus').textContent     = pStatus;
+            document.getElementById('resLife').textContent       = pLife;
             document.getElementById('resLastAction').textContent = pLastAction;
-            document.getElementById('resLink').innerHTML = `<a href="${pProfileUrl}" target="_blank">Open Profile</a>`;
+            document.getElementById('resLink').innerHTML         = `<a href="${pProfileUrl}" target="_blank">Open Profile</a>`;
             card.style.display = 'block';
-
-            // Send Data to Google Sheet
+ 
+            // Send to Google Sheet
             if (GOOGLE_WEB_APP_URL) {
-                logStatusDiv.textContent = "looking up player..";
+                logStatusDiv.textContent = "Logging to sheet...";
                 logStatusDiv.style.backgroundColor = "#2a4d6c";
                 logStatusDiv.style.color = "#00d2ff";
                 logStatusDiv.style.display = "block";
-
+ 
                 const params = new URLSearchParams({
-                    playerId: data.player_id,
-                    name: pName,
-                    level: pLevel,
-                    status: pStatus,
-                    life: pLife,
-                    faction: pFaction,
-                    job: pJob,
+                    playerId:   profileData.player_id,
+                    name:       pName,
+                    level:      pLevel,
+                    faction:    pFaction,
+                    job:        pJob,
+                    networth:   pNetworth,
+                    status:     pStatus,
+                    life:       pLife,
                     lastAction: pLastAction,
                     profileUrl: pProfileUrl
                 });
-
+ 
                 await fetch(GOOGLE_WEB_APP_URL, {
                     method: 'POST',
-                    mode: 'no-cors', 
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: params.toString()
                 });
-
-                logStatusDiv.textContent = "✓ Lookup was successful!";
+ 
+                logStatusDiv.textContent = "✓ Lookup successful!";
                 logStatusDiv.style.backgroundColor = "#1b3a24";
                 logStatusDiv.style.color = "#2ecc71";
             }
-
+ 
         } catch (error) {
             showError('An error occurred during execution. Check network or URLs.');
             console.error(error);
         }
     }
-
+ 
     function showError(message) {
         const errorDiv = document.getElementById('errorMessage');
         errorDiv.textContent = message;
         errorDiv.style.display = 'block';
     }
 </script>
-
+ 
 </body>
 </html>
