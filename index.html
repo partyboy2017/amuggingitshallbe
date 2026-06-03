@@ -175,10 +175,6 @@
             <span class="value" id="resJob">-</span>
         </div>
         <div class="data-row">
-            <span class="label">Networth:</span>
-            <span class="value" id="resNetworth">-</span>
-        </div>
-        <div class="data-row">
             <span class="label">Status:</span>
             <span class="value" id="resStatus">-</span>
         </div>
@@ -205,14 +201,6 @@
         if (savedKey) document.getElementById('apiKey').value = savedKey;
     });
  
-    function formatNetworth(value) {
-        if (!value || isNaN(value)) return 'N/A';
-        if (value >= 1_000_000_000) return '$' + (value / 1_000_000_000).toFixed(2) + 'B';
-        if (value >= 1_000_000) return '$' + (value / 1_000_000).toFixed(2) + 'M';
-        if (value >= 1_000) return '$' + (value / 1_000).toFixed(2) + 'K';
-        return '$' + value;
-    }
- 
     async function fetchAndLogData() {
         const apiKey = document.getElementById('apiKey').value.trim();
         const playerId = document.getElementById('playerId').value.trim();
@@ -231,27 +219,17 @@
  
         localStorage.setItem('torn_api_key', apiKey);
  
-        // Fetch profile and personalstats (for networth) in parallel
         const profileUrl = `https://api.torn.com/user/${playerId}?selections=profile&key=${apiKey}`;
-        const networthUrl = `https://api.torn.com/user/${playerId}?selections=networth&key=${apiKey}`;
  
         try {
-            const [profileRes, networthRes] = await Promise.all([
-                fetch(profileUrl),
-                fetch(networthUrl)
-            ]);
+            const profileRes = await fetch(profileUrl);
  
-            if (!profileRes.ok || !networthRes.ok) throw new Error('Torn API communication failure.');
+            if (!profileRes.ok) throw new Error('Torn API communication failure.');
  
             const profileData = await profileRes.json();
-            const networthData = await networthRes.json();
  
             if (profileData.error) {
                 showError(`Torn API Error: ${profileData.error.error}`);
-                return;
-            }
-            if (networthData.error) {
-                showError(`Torn API Error (networth): ${networthData.error.error}`);
                 return;
             }
  
@@ -270,15 +248,12 @@
             const pLastAction = profileData.last_action
                                   ? `${profileData.last_action.relative} (${profileData.last_action.status})`
                                   : 'Unknown';
-            const pNetworthRaw = networthData.networth ? networthData.networth.total : null;
-            const pNetworth   = formatNetworth(pNetworthRaw);
  
             // Update UI
             document.getElementById('resName').textContent       = `${pName} [${profileData.player_id}]`;
             document.getElementById('resLevel').textContent      = pLevel;
             document.getElementById('resFaction').textContent    = pFaction;
             document.getElementById('resJob').textContent        = pJob;
-            document.getElementById('resNetworth').textContent   = pNetworth;
             document.getElementById('resStatus').textContent     = pStatus;
             document.getElementById('resLife').textContent       = pLife;
             document.getElementById('resLastAction').textContent = pLastAction;
@@ -298,7 +273,6 @@
                     level:      pLevel,
                     faction:    pFaction,
                     job:        pJob,
-                    networth:   pNetworth,
                     status:     pStatus,
                     life:       pLife,
                     lastAction: pLastAction,
