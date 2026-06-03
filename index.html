@@ -183,6 +183,10 @@
             <span class="value" id="resLife">-</span>
         </div>
         <div class="data-row">
+            <span class="label">Last Action:</span>
+            <span class="value" id="resLastAction">-</span>
+        </div>
+        <div class="data-row">
             <span class="label">Profile Link:</span>
             <span class="value" id="resLink">-</span>
         </div>
@@ -231,10 +235,10 @@
             const pLevel = data.level;
             const pStatus = data.status ? data.status.description : 'Unknown';
             const pLife = data.life ? data.life.current : 'N/A';
-            
             const pFaction = data.faction && data.faction.faction_name ? `${data.faction.faction_name} [${data.faction.faction_id}]` : 'None';
             const pJob = data.job && data.job.company_name ? data.job.company_name : (data.job && data.job.position ? data.job.position : 'None');
             const pProfileUrl = `https://www.torn.com/profiles.php?XID=${data.player_id}`;
+            const pLastAction = data.last_action ? `${data.last_action.relative} (${data.last_action.status})` : 'Unknown';
 
             // Update UI elements
             document.getElementById('resName').textContent = `${pName} [${data.player_id}]`;
@@ -243,6 +247,7 @@
             document.getElementById('resJob').textContent = pJob;
             document.getElementById('resStatus').textContent = pStatus;
             document.getElementById('resLife').textContent = pLife;
+            document.getElementById('resLastAction').textContent = pLastAction;
             document.getElementById('resLink').innerHTML = `<a href="${pProfileUrl}" target="_blank">Open Profile</a>`;
             card.style.display = 'block';
 
@@ -261,6 +266,7 @@
                     life: pLife,
                     faction: pFaction,
                     job: pJob,
+                    lastAction: pLastAction,
                     profileUrl: pProfileUrl
                 });
 
